@@ -259,7 +259,79 @@
       #kg-canvas-wrap{height:90vw}
       .ask-row{flex-direction:column;align-items:flex-start}
     }
-  </style>
+  
+
+    /* ═════════════════════════════════════════════════
+       ENHANCEMENTS: Lenis, Cursor States, Animations
+    ═════════════════════════════════════════════════ */
+
+    /* CSS VARIABLES FOR ENHANCEMENTS */
+    :root{
+      --splash-particle-size: 4px;
+      --cursor-transition: 0.15s;
+      --enter-duration: 0.8s;
+      --enter-delay: 0.1s;
+    }
+
+    /* ─── ENHANCED CURSOR STATES ─── */
+    #cursor[data-state="pointer"]{width:50px;height:50px;background:transparent;border:2px solid var(--c);display:flex;align-items:center;justify-content:center;font-size:.5rem;font-weight:700;color:var(--c)}
+    #cursor[data-state="eye"]{width:28px;height:20px;border-radius:50%;border:2px solid var(--v);background:radial-gradient(ellipse 6px 8px at 50% 50%, var(--v) 40%, transparent 70%)}
+    #cursor[data-state="arrow"]{width:16px;height:16px;clip-path:polygon(0 0, 100% 50%, 0 100%, 50% 50%);background:var(--c)}
+    #cursor-ring[data-state="pointer"]{display:none}
+    #cursor-ring[data-state="eye"]{display:none}
+    #cursor-ring[data-state="arrow"]{display:none}
+
+    /* ─── CANVAS ANIMATED LOGO ─── */
+    #nav-logo-canvas{width:40px;height:40px;flex-shrink:0}
+
+    /* ─── LIGHTNING TEXT EFFECT ─── */
+    #sol-headline.lightning-active .char-lightning{position:relative;animation:lightning-flash var(--lightning-duration) ease-out forwards}
+    @keyframes lightning-flash{0%{text-shadow:0 0 10px var(--c), 0 0 20px var(--c), 0 0 40px var(--c);opacity:1}100%{text-shadow:none;opacity:1}}
+
+    /* ─── ENTRY ANIMATIONS ─── */
+    .section-label{opacity:0;transform:translateX(-30px);transition:opacity var(--enter-duration) ease-out, transform var(--enter-duration) ease-out}
+    .section-label.revealed{opacity:1;transform:translateX(0)}
+    .section-title{opacity:0;transform:translateY(30px);transition:opacity var(--enter-duration) ease-out, transform var(--enter-duration) ease-out}
+    .section-title.revealed{opacity:1;transform:translateY(0)}
+    .section-title .word-reveal{display:inline-block;overflow:hidden}
+    .section-title .word-reveal span{display:inline-block;opacity:0;transform:translateY(110%);transition:opacity var(--enter-duration) ease-out, transform var(--enter-duration) ease-out}
+    .section-title.revealed .word-reveal span{opacity:1;transform:translateY(0)}
+    .section-body{opacity:0;transform:translateY(20px);transition:opacity var(--enter-duration) ease-out, transform var(--enter-duration) ease-out}
+    .section-body.revealed{opacity:1;transform:translateY(0)}
+
+    /* ─── SPLASH PARTICLES ─── */
+    .splash-particle{position:fixed;pointer-events:none;border-radius:50%;z-index:8500}
+
+    /* ─── FLOATING SECTION INDICATOR ─── */
+    #section-indicator{position:fixed;right:3rem;top:50%;transform:translateY(-50%);z-index:100;display:flex;flex-direction:column;gap:2rem}
+    #section-indicator .indicator-dot{width:10px;height:10px;border-radius:50%;border:2px solid rgba(124,58,237,.3);background:transparent;cursor:pointer;transition:all .3s;position:relative}
+    #section-indicator .indicator-dot:hover{border-color:var(--c)}
+    #section-indicator .indicator-dot.active{background:var(--v);border-color:var(--v);box-shadow:0 0 12px var(--v)}
+    #section-indicator .indicator-label{position:absolute;right:1.5rem;white-space:nowrap;font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.1em;color:var(--muted);opacity:0;pointer-events:none;transition:opacity .2s}
+    #section-indicator .indicator-dot:hover .indicator-label{opacity:1}
+
+    /* ─── LOADING SCREEN ─── */
+    #loading-screen{position:fixed;inset:0;z-index:99999;background:var(--bg);display:flex;align-items:center;justify-content:center;opacity:1;transition:opacity 0.6s ease-out;pointer-events:auto}
+    #loading-screen.fade-out{opacity:0;pointer-events:none}
+    #loading-screen-content{display:flex;flex-direction:column;align-items:center;gap:2rem}
+    #loading-logo-canvas{width:80px;height:80px}
+    #loading-text{font-family:'JetBrains Mono',monospace;font-size:.72rem;letter-spacing:.2em;color:#fff}
+
+    /* ─── NOISE ANIMATION ─── */
+    .noise{animation:noise-shift 4s linear infinite}
+    @keyframes noise-shift{0%{background-position:0 0}100%{background-position:100px 100px}}
+
+    /* ─── PROGRESS BAR LENIS ─── */
+    #progress{transition:width .1s linear}
+
+    /* Mobile disable enhancements */
+    @media(max-width:768px){
+      #section-indicator{display:none}
+      body.splash-disabled .splash-particle{display:none}
+      #cursor[data-state]{width:10px !important;height:10px !important;background:var(--v) !important;border:none !important}
+      #cursor-ring[data-state]{display:block !important}
+    }
+</style>
 </head>
 <body>
 
@@ -1125,6 +1197,390 @@ if(!isMob){
 // Ask box
 gsap.to('#ask-box',{opacity:1,y:0,duration:1,ease:'expo.out',
   scrollTrigger:{trigger:'#ask',start:'top 75%'}});
+
+
+// ══════════════════════════════════════════════════════════════════
+// ENHANCEMENT 1: LENIS SMOOTH SCROLL
+// ══════════════════════════════════════════════════════════════════
+document.head.insertAdjacentHTML('beforeend', '<script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js"><\/script>');
+
+let lenis;
+window.addEventListener('DOMContentLoaded', () => {
+  lenis = new Lenis({
+    duration: 1.2,
+    easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+    smooth: true
+  });
+
+  lenis.on('scroll', ScrollTrigger.update);
+  gsap.ticker.add((time) => lenis.raf(time * 1000));
+  gsap.ticker.lagSmoothing(0);
+});
+
+// ══════════════════════════════════════════════════════════════════
+// ENHANCEMENT 2: ENHANCED CUSTOM CURSOR WITH STATES
+// ══════════════════════════════════════════════════════════════════
+const cursor = document.getElementById('cursor');
+const cursorRing = document.getElementById('cursor-ring');
+let cursorState = 'default';
+let cursorX = 0, cursorY = 0;
+
+document.addEventListener('mousemove', (e) => {
+  cursorX = e.clientX;
+  cursorY = e.clientY;
+  gsap.to(cursor, {left: cursorX, top: cursorY, duration: 0, overwrite: false});
+  gsap.to(cursorRing, {left: cursorX, top: cursorY, duration: 0.1, overwrite: false});
+});
+
+// Update cursor state on element hover
+const pointerElements = document.querySelectorAll('[data-cursor-pointer], a, button, .ask-cta');
+const eyeElements = document.querySelectorAll('[data-cursor-eye]');
+const arrowElements = document.querySelectorAll('[data-cursor-arrow]');
+
+const setCursorState = (state) => {
+  if (cursorState !== state) {
+    cursorState = state;
+    cursor.setAttribute('data-state', state);
+    cursorRing.setAttribute('data-state', state);
+  }
+};
+
+pointerElements.forEach(el => {
+  el.addEventListener('mouseenter', () => setCursorState('pointer'));
+  el.addEventListener('mouseleave', () => setCursorState('default'));
+});
+
+eyeElements.forEach(el => {
+  el.addEventListener('mouseenter', () => setCursorState('eye'));
+  el.addEventListener('mouseleave', () => setCursorState('default'));
+});
+
+arrowElements.forEach(el => {
+  el.addEventListener('mouseenter', () => setCursorState('arrow'));
+  el.addEventListener('mouseleave', () => setCursorState('default'));
+});
+
+// ══════════════════════════════════════════════════════════════════
+// ENHANCEMENT 3: CANVAS ANIMATED GRADIENT LOGO
+// ══════════════════════════════════════════════════════════════════
+function createAnimatedLogo() {
+  const navLogo = document.querySelector('.nav-logo');
+  if (!navLogo) return;
+
+  const canvas = document.createElement('canvas');
+  canvas.id = 'nav-logo-canvas';
+  canvas.width = 40;
+  canvas.height = 40;
+
+  // Insert canvas before logo text
+  const textNode = navLogo.childNodes[navLogo.childNodes.length - 1];
+  navLogo.insertBefore(canvas, textNode);
+
+  const ctx = canvas.getContext('2d');
+  let time = 0;
+
+  function drawGradient() {
+    time += 0.01;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Create shifting gradient
+    const hue1 = (time * 50) % 360;
+    const hue2 = (time * 50 + 120) % 360;
+    const hue3 = (time * 50 + 240) % 360;
+
+    const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    grad.addColorStop(0, `hsl(${hue1}, 90%, 50%)`);
+    grad.addColorStop(0.5, `hsl(${hue2}, 90%, 50%)`);
+    grad.addColorStop(1, `hsl(${hue3}, 90%, 50%)`);
+
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(canvas.width / 2, canvas.height / 2, canvas.width / 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    requestAnimationFrame(drawGradient);
+  }
+  drawGradient();
+}
+
+window.addEventListener('DOMContentLoaded', createAnimatedLogo);
+
+// ══════════════════════════════════════════════════════════════════
+// ENHANCEMENT 4: ENTRY ANIMATIONS (IntersectionObserver)
+// ══════════════════════════════════════════════════════════════════
+const observerOptions = {
+  threshold: 0.1,
+  rootMargin: '0px 0px -100px 0px'
+};
+
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('revealed');
+      revealObserver.unobserve(entry.target);
+    }
+  });
+}, observerOptions);
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.section-label, .section-body').forEach(el => {
+    revealObserver.observe(el);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════
+// ENHANCEMENT 5: LIGHTNING TEXT EFFECT
+// ══════════════════════════════════════════════════════════════════
+function initLightningEffect() {
+  const headline = document.getElementById('sol-headline');
+  if (!headline) return;
+
+  // Split text into characters with spans
+  const text = headline.textContent;
+  headline.innerHTML = '';
+  text.split('').forEach(char => {
+    const span = document.createElement('span');
+    span.className = 'char-lightning';
+    span.textContent = char;
+    headline.appendChild(span);
+  });
+
+  headline.classList.add('lightning-active');
+
+  function randomLightning() {
+    const chars = headline.querySelectorAll('.char-lightning');
+    const randomChar = chars[Math.floor(Math.random() * chars.length)];
+    const duration = (Math.random() * 0.4 + 0.3).toFixed(2);
+
+    randomChar.style.setProperty('--lightning-duration', duration + 's');
+    randomChar.style.animation = 'none';
+    setTimeout(() => {
+      randomChar.style.animation = `lightning-flash ${duration}s ease-out forwards`;
+    }, 10);
+
+    setTimeout(randomLightning, Math.random() * 2500 + 2500);
+  }
+
+  randomLightning();
+}
+
+window.addEventListener('DOMContentLoaded', initLightningEffect);
+
+// ══════════════════════════════════════════════════════════════════
+// ENHANCEMENT 6: SPLASH CURSOR (CLICK PARTICLES)
+// ══════════════════════════════════════════════════════════════════
+const isMobileDev = window.innerWidth <= 768;
+if (!isMobileDev) {
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-cursor-pointer], a, button, .ask-cta')) {
+      createSplash(e.clientX, e.clientY);
+    }
+  });
+
+  function createSplash(x, y) {
+    const particleCount = Math.random() * 4 + 8;
+    const colors = ['#7c3aed', '#06b6d4', '#10b981'];
+
+    for (let i = 0; i < particleCount; i++) {
+      const particle = document.createElement('div');
+      particle.className = 'splash-particle';
+      document.body.appendChild(particle);
+
+      const angle = (i / particleCount) * Math.PI * 2;
+      const velocity = 2 + Math.random() * 3;
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const size = 4 + Math.random() * 3;
+
+      particle.style.left = x + 'px';
+      particle.style.top = y + 'px';
+      particle.style.width = size + 'px';
+      particle.style.height = size + 'px';
+      particle.style.background = color;
+      particle.style.opacity = '1';
+
+      let px = x, py = y;
+      let vx = Math.cos(angle) * velocity;
+      let vy = Math.sin(angle) * velocity;
+      let life = 600;
+
+      const animate = () => {
+        life -= 16;
+        vx *= 0.96;
+        vy *= 0.96;
+        vy += 0.1; // gravity
+
+        px += vx;
+        py += vy;
+
+        particle.style.left = px + 'px';
+        particle.style.top = py + 'px';
+        particle.style.opacity = Math.max(0, life / 600);
+
+        if (life > 0) {
+          requestAnimationFrame(animate);
+        } else {
+          particle.remove();
+        }
+      };
+      animate();
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ENHANCEMENT 7: FLOATING SECTION INDICATOR
+// ══════════════════════════════════════════════════════════════════
+if (!isMobileDev) {
+  function initSectionIndicator() {
+    const sections = [
+      {id: 'hero', label: 'Hero'},
+      {id: 'problem-wrapper', label: 'Problem'},
+      {id: 'solution', label: 'Solution'},
+      {id: 'kg-section', label: 'Knowledge'},
+      {id: 'market-wrapper', label: 'Market'},
+      {id: 'traction', label: 'Traction'},
+      {id: 'team', label: 'Team'},
+      {id: 'ask', label: 'Ask'}
+    ];
+
+    const indicator = document.createElement('div');
+    indicator.id = 'section-indicator';
+
+    sections.forEach((section, idx) => {
+      const dot = document.createElement('div');
+      dot.className = 'indicator-dot';
+      dot.innerHTML = `<span class="indicator-label">${section.label}</span>`;
+
+      dot.addEventListener('click', () => {
+        const target = document.getElementById(section.id);
+        if (target && lenis) {
+          lenis.scrollTo(target, {offset: -100});
+        }
+      });
+
+      ScrollTrigger.create({
+        trigger: '#' + section.id,
+        start: 'top 50%',
+        end: 'bottom 50%',
+        onEnter: () => {
+          document.querySelectorAll('#section-indicator .indicator-dot').forEach(d => d.classList.remove('active'));
+          dot.classList.add('active');
+        },
+        onEnterBack: () => {
+          document.querySelectorAll('#section-indicator .indicator-dot').forEach(d => d.classList.remove('active'));
+          dot.classList.add('active');
+        }
+      });
+
+      indicator.appendChild(dot);
+    });
+
+    document.body.appendChild(indicator);
+  }
+
+  window.addEventListener('DOMContentLoaded', initSectionIndicator);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ENHANCEMENT 8: PROGRESS BAR LENIS-BASED
+// ══════════════════════════════════════════════════════════════════
+function updateProgressBar() {
+  if (lenis) {
+    const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+    const progress = (window.scrollY / scrollHeight) * 100;
+    document.getElementById('progress').style.width = progress + '%';
+  }
+  requestAnimationFrame(updateProgressBar);
+}
+window.addEventListener('DOMContentLoaded', updateProgressBar);
+
+// ══════════════════════════════════════════════════════════════════
+// ENHANCEMENT 9: PAGE LOAD SEQUENCE
+// ══════════════════════════════════════════════════════════════════
+function createLoadingScreen() {
+  const loadingScreen = document.createElement('div');
+  loadingScreen.id = 'loading-screen';
+
+  const content = document.createElement('div');
+  content.id = 'loading-screen-content';
+
+  const canvas = document.createElement('canvas');
+  canvas.id = 'loading-logo-canvas';
+  canvas.width = 80;
+  canvas.height = 80;
+
+  const text = document.createElement('div');
+  text.id = 'loading-text';
+  text.textContent = 'DREAMVERSE';
+
+  content.appendChild(canvas);
+  content.appendChild(text);
+  loadingScreen.appendChild(content);
+  document.body.insertBefore(loadingScreen, document.body.firstChild);
+
+  // Animate gradient canvas
+  const ctx = canvas.getContext('2d');
+  let time = 0;
+  let animating = true;
+
+  function drawLoadingLogo() {
+    time += 0.02;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const hue1 = (time * 50) % 360;
+    const hue2 = (time * 50 + 120) % 360;
+    const hue3 = (time * 50 + 240) % 360;
+
+    const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    grad.addColorStop(0, `hsl(${hue1}, 90%, 55%)`);
+    grad.addColorStop(0.5, `hsl(${hue2}, 90%, 55%)`);
+    grad.addColorStop(1, `hsl(${hue3}, 90%, 55%)`);
+
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(canvas.width / 2, canvas.height / 2, canvas.width / 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (animating) {
+      requestAnimationFrame(drawLoadingLogo);
+    }
+  }
+  drawLoadingLogo();
+
+  // Fade out loading screen after 1.5s
+  setTimeout(() => {
+    animating = false;
+    loadingScreen.classList.add('fade-out');
+    setTimeout(() => {
+      loadingScreen.remove();
+    }, 600);
+  }, 1500);
+}
+
+window.addEventListener('DOMContentLoaded', createLoadingScreen);
+
+// ══════════════════════════════════════════════════════════════════
+// FIX: Lenis scroll to method compatibility
+// ══════════════════════════════════════════════════════════════════
+if (!Lenis.prototype.scrollTo) {
+  Lenis.prototype.scrollTo = function(target, options = {}) {
+    let targetPos = 0;
+    if (typeof target === 'string') {
+      const el = document.querySelector(target);
+      if (el) targetPos = el.offsetTop;
+    } else if (target instanceof Element) {
+      targetPos = target.offsetTop;
+    } else if (typeof target === 'number') {
+      targetPos = target;
+    }
+
+    if (options.offset) {
+      targetPos += options.offset;
+    }
+
+    this.targetScroll = targetPos;
+  };
+}
 </script>
 </body>
 </html>
