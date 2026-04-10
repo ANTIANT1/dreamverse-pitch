@@ -37,7 +37,9 @@
     .nav-dot{width:6px;height:6px;background:var(--v);border-radius:50%;animation:pulse 2s infinite;box-shadow:0 0 12px var(--v)}
     @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.5)}}
     .nav-links{display:flex;gap:2.5rem;list-style:none}
-    .nav-links a{font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.3);text-decoration:none;transition:color .3s}
+    .nav-links a{font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.3);text-decoration:none;transition:color .3s;position:relative}
+    .nav-links a::after{content:'';position:absolute;bottom:-2px;left:0;width:0;height:1px;background:var(--c);transition:width .3s;transform-origin:left}
+    .nav-links a:hover::after{width:100%}
     .nav-links a:hover{color:#fff}
 
     /* ── HERO ──────────────────────────────────────── */
@@ -56,6 +58,12 @@
     .hero-scroll span{font-family:'JetBrains Mono',monospace;font-size:.52rem;letter-spacing:.25em;color:rgba(255,255,255,.2)}
     .scroll-line{width:1px;height:56px;background:linear-gradient(to bottom,rgba(124,58,237,.6),transparent);animation:sl 2s ease-in-out infinite}
     @keyframes sl{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform:scaleY(1);transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+
+    /* ── TEXT ANIMATION MASKS (ziben.fr style) ────── */
+    .word-mask{display:inline-block;overflow:hidden;vertical-align:bottom;line-height:1.1;padding-bottom:0.1em}
+    .word-inner{display:inline-block;transform:translateY(110%);will-change:transform}
+    .char-mask{display:inline-block;overflow:hidden;vertical-align:bottom;line-height:1.1;padding-bottom:0.05em}
+    .char-inner{display:inline-block;transform:translateY(110%);will-change:transform}
 
     /* ── SHARED ────────────────────────────────────── */
     .section-label{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.25em;color:var(--v);text-transform:uppercase;margin-bottom:1.5rem;display:block}
@@ -84,8 +92,6 @@
     #solution{padding:12rem 3rem;border-top:1px solid rgba(255,255,255,.05)}
     .solution-inner{max-width:1200px;margin:0 auto}
     .sol-headline{font-size:clamp(3rem,7vw,6.5rem);font-weight:900;letter-spacing:-.04em;line-height:.95;color:#fff;margin-bottom:5rem}
-    .sol-headline .word{display:inline-block;overflow:hidden;margin-right:.3em}
-    .sol-headline .word span{display:inline-block;transform:translateY(110%)}
     .sol-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2rem}
     .sol-feat{padding:2.5rem 2rem;border:1px solid rgba(255,255,255,.06);border-radius:1rem;background:rgba(12,12,32,.5);opacity:0;transform:translateY(40px);transition:border-color .3s}
     .sol-feat:hover{border-color:var(--border)}
@@ -181,9 +187,7 @@
     footer{padding:2rem 3rem;border-top:1px solid rgba(255,255,255,.05);display:flex;justify-content:space-between}
     footer p{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.15em;color:var(--muted)}
 
-    /* ══════════════════════════════════════════════
-       MOBILE  ≤ 768px
-    ══════════════════════════════════════════════ */
+    /* ══════════════════════════════════════════════\n       MOBILE  ≤ 768px\n    ══════════════════════════════════════════════ */
     @media(max-width:768px){
       /* Hide custom cursor on touch */
       body{cursor:auto}
@@ -261,9 +265,7 @@
     }
   
 
-    /* ═════════════════════════════════════════════════
-       ENHANCEMENTS: Lenis, Cursor States, Animations
-    ═════════════════════════════════════════════════ */
+    /* ═════════════════════════════════════════════════\n       ENHANCEMENTS: Lenis, Cursor States, Animations\n    ═════════════════════════════════════════════════ */
 
     /* CSS VARIABLES FOR ENHANCEMENTS */
     :root{
@@ -331,7 +333,7 @@
       #cursor[data-state]{width:10px !important;height:10px !important;background:var(--v) !important;border:none !important}
       #cursor-ring[data-state]{display:block !important}
     }
-</style>
+  </style>
 </head>
 <body>
 
@@ -546,18 +548,88 @@
 </footer>
 
 <script>
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
+// TEXT REVEAL ANIMATION SYSTEM (ziben.fr style)
+// ══════════════════════════════════════════════════════════════════
+
+/**
+ * Splits text into words and wraps each in word-mask/word-inner spans.
+ * Returns array of .word-inner elements ready for GSAP animation.
+ */
+function splitTextForReveal(element, splitBy = 'words') {
+  if (!element) return [];
+  
+  const text = element.textContent;
+  element.innerHTML = '';
+  
+  let parts = [];
+  if (splitBy === 'words') {
+    parts = text.split(/(\s+)/).filter(p => p.trim().length > 0 || p === ' ');
+  } else if (splitBy === 'chars') {
+    parts = text.split('');
+  }
+  
+  const wordInners = [];
+  
+  parts.forEach(part => {
+    if (part === ' ') {
+      element.appendChild(document.createTextNode(' '));
+    } else {
+      const mask = document.createElement('span');
+      mask.className = 'word-mask';
+      
+      const inner = document.createElement('span');
+      inner.className = 'word-inner';
+      inner.textContent = part;
+      
+      mask.appendChild(inner);
+      element.appendChild(mask);
+      wordInners.push(inner);
+    }
+  });
+  
+  return wordInners;
+}
+
+/**
+ * Splits text into characters and wraps each in char-mask/char-inner spans.
+ */
+function splitCharsForReveal(element) {
+  if (!element) return [];
+  
+  const text = element.textContent;
+  element.innerHTML = '';
+  
+  const charInners = [];
+  
+  text.split('').forEach(char => {
+    const mask = document.createElement('span');
+    mask.className = 'char-mask';
+    
+    const inner = document.createElement('span');
+    inner.className = 'char-inner';
+    inner.textContent = char;
+    
+    mask.appendChild(inner);
+    element.appendChild(mask);
+    charInners.push(inner);
+  });
+  
+  return charInners;
+}
+
+// ══════════════════════════════════════════════════════════════════
 // CURSOR
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
 const cur = document.getElementById('cursor');
 const ring = document.getElementById('cursor-ring');
 let mx=0,my=0,rx=0,ry=0;
 document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cur.style.left=mx+'px';cur.style.top=my+'px'});
 (function anim(){rx+=(mx-rx)*.1;ry+=(my-ry)*.1;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(anim)})();
 
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
 // NAV + PROGRESS
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
 const prog = document.getElementById('progress');
 window.addEventListener('scroll',()=>{
   const pct = window.scrollY/(document.body.scrollHeight-window.innerHeight)*100;
@@ -565,9 +637,9 @@ window.addEventListener('scroll',()=>{
   document.getElementById('nav').classList.toggle('scrolled',window.scrollY>60);
 });
 
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
 // HERO — Three.js Particle Sphere
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
 (function initHeroThree(){
   const canvas = document.getElementById('hero-three');
   const renderer = new THREE.WebGLRenderer({canvas, alpha:true, antialias:true});
@@ -661,9 +733,9 @@ window.addEventListener('scroll',()=>{
 })();
 
 
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
 // KG — 3D Interactive Knowledge Graph (Three.js)
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
 (function initKG(){
   // Real KG data — key nodes (non-document) + representative samples
   const nodeTypes = {
@@ -821,7 +893,7 @@ window.addEventListener('scroll',()=>{
     renderer.setSize(w,h); camera.aspect=w/h; camera.updateProjectionMatrix();
   });
 
-  // ── FORCE LAYOUT on named 44 nodes ────────────────────
+  // ── FORCE LAYOUT on named 44 nodes ────────────────────────
   const PHI2 = Math.PI*(1+Math.sqrt(5));
   nodes.forEach((n,i)=>{
     const t=i/nodes.length, angle=PHI2*i;
@@ -866,7 +938,7 @@ window.addEventListener('scroll',()=>{
   const normScale = TARGET_R/Math.max(maxR,0.001);
   nodes.forEach(n=>{n.x*=normScale;n.y*=normScale;n.z*=normScale});
 
-  // ── DEGREE MAP for node sizing ─────────────────────────
+  // ── DEGREE MAP for node sizing ─────────────────────────────
   const degree=new Array(nodes.length).fill(0);
   edges.forEach(([ai,bi])=>{degree[ai]++;degree[bi]++;});
   const maxDeg=Math.max(...degree,1);
@@ -1118,12 +1190,12 @@ window.addEventListener('scroll',()=>{
 })();
 
 
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
 // GSAP ScrollTrigger
-// ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
 gsap.registerPlugin(ScrollTrigger);
 
-// Hero chars
+// Hero chars — keep original per-char animation
 const heroTitle = document.getElementById('hero-title');
 "DREAMVERSE".split('').forEach(ch=>{
   const s=document.createElement('span');s.className='char';s.textContent=ch;heroTitle.appendChild(s);
@@ -1135,20 +1207,190 @@ heroTl
   .to('#hero-sub',{opacity:1,y:0,duration:1},'-=.3')
   .to('#hero-scroll',{opacity:1,duration:.8},'-=.2');
 
-// Solution headline words
-const solWords="Jeder Spielinhalt wird durch KI erzeugt".split(' ');
-const solH=document.getElementById('sol-headline');
-solWords.forEach(w=>{
-  const o=document.createElement('div');o.className='word';
-  const i=document.createElement('span');i.textContent=w;
-  o.appendChild(i);solH.appendChild(o);solH.appendChild(document.createTextNode(' '));
+// ──────────────────────────────────────────────────────────────────
+// SOLUTION HEADLINE — ENHANCED TEXT ANIMATION
+// ──────────────────────────────────────────────────────────────────
+const solHeadline = document.getElementById('sol-headline');
+const solWords = "Jeder Spielinhalt wird durch KI erzeugt".split(' ');
+solHeadline.innerHTML = '';
+
+const solWordInners = [];
+solWords.forEach((word, idx) => {
+  const wordMask = document.createElement('span');
+  wordMask.className = 'word-mask';
+  
+  const wordInner = document.createElement('span');
+  wordInner.className = 'word-inner';
+  wordInner.textContent = word;
+  
+  wordMask.appendChild(wordInner);
+  solHeadline.appendChild(wordMask);
+  solHeadline.appendChild(document.createTextNode(' '));
+  
+  solWordInners.push(wordInner);
 });
-gsap.to('#sol-headline .word span',{y:0,duration:.9,stagger:.08,ease:'expo.out',scrollTrigger:{trigger:'#solution',start:'top 70%'}});
+
+// Animate solution headline words
+gsap.fromTo(solWordInners, 
+  {y: '110%'}, 
+  {y: '0%', duration: 1.1, stagger: 0.08, ease: 'expo.out',
+   scrollTrigger: {trigger: '#solution', start: 'top 70%'}}
+);
+
+// Solution features
 gsap.to('.sol-feat',{opacity:1,y:0,duration:.8,stagger:.15,ease:'power3.out',scrollTrigger:{trigger:'.sol-grid',start:'top 80%'}});
 
 const isMob = window.innerWidth <= 768;
 
-// Problem pin — desktop only; mobile shows cards stacked/visible
+// ──────────────────────────────────────────────────────────────────
+// SECTION TITLE & BODY TEXT ANIMATIONS (All sections)
+// ──────────────────────────────────────────────────────────────────
+
+function animateSectionHeading(selector) {
+  const heading = document.querySelector(selector);
+  if (!heading) return;
+  
+  const wordInners = splitTextForReveal(heading, 'words');
+  if (wordInners.length === 0) return;
+  
+  gsap.fromTo(wordInners,
+    {y: '110%'},
+    {y: '0%', duration: 1.1, stagger: 0.07, ease: 'expo.out',
+     scrollTrigger: {trigger: heading.closest('section') || heading.closest('div'), start: 'top 75%'}}
+  );
+}
+
+function animateSectionLabel(selector) {
+  const labels = document.querySelectorAll(selector);
+  labels.forEach(label => {
+    const charInners = splitCharsForReveal(label);
+    if (charInners.length === 0) return;
+    
+    gsap.fromTo(charInners,
+      {y: '110%'},
+      {y: '0%', duration: 0.8, stagger: 0.04, ease: 'expo.out',
+       scrollTrigger: {trigger: label.closest('section') || label.closest('div'), start: 'top 80%'}}
+    );
+  });
+}
+
+function animateSectionBody(selector) {
+  const bodies = document.querySelectorAll(selector);
+  bodies.forEach(body => {
+    const wordInners = splitTextForReveal(body, 'words');
+    if (wordInners.length === 0) return;
+    
+    gsap.fromTo(wordInners,
+      {y: '110%', opacity: 0.6},
+      {y: '0%', opacity: 1, duration: 0.95, stagger: 0.05, ease: 'expo.out',
+       scrollTrigger: {trigger: body.closest('section') || body.closest('div'), start: 'top 80%'}}
+    );
+  });
+}
+
+// Apply to all sections
+window.addEventListener('DOMContentLoaded', () => {
+  // Problem section
+  animateSectionLabel('.problem-inner .section-label');
+  animateSectionHeading('.problem-inner .section-title');
+  animateSectionBody('.problem-inner .section-body');
+  
+  // Problem card titles and bodies
+  document.querySelectorAll('.p-title').forEach(el => {
+    const wordInners = splitTextForReveal(el, 'words');
+    gsap.fromTo(wordInners,
+      {y: '110%'},
+      {y: '0%', duration: 0.85, stagger: 0.06, ease: 'expo.out',
+       scrollTrigger: {trigger: el.closest('.p-card'), start: 'top 80%'}}
+    );
+  });
+  
+  document.querySelectorAll('.p-body').forEach(el => {
+    const wordInners = splitTextForReveal(el, 'words');
+    gsap.fromTo(wordInners,
+      {y: '110%', opacity: 0.6},
+      {y: '0%', opacity: 1, duration: 0.8, stagger: 0.04, ease: 'expo.out',
+       scrollTrigger: {trigger: el.closest('.p-card'), start: 'top 85%'}}
+    );
+  });
+  
+  // KG section
+  animateSectionLabel('#kg-section .section-label');
+  animateSectionHeading('#kg-section .section-title');
+  animateSectionBody('#kg-section .section-body');
+  
+  // Market section
+  animateSectionLabel('.market-header .section-label');
+  animateSectionHeading('.market-header .section-title');
+  
+  // Traction section
+  animateSectionLabel('#traction .section-label');
+  animateSectionHeading('#traction .section-title');
+  animateSectionBody('#traction .section-body');
+  
+  // Team section
+  animateSectionLabel('#team .section-label');
+  
+  document.querySelectorAll('.team-name').forEach(el => {
+    const wordInners = splitTextForReveal(el, 'words');
+    gsap.fromTo(wordInners,
+      {y: '110%'},
+      {y: '0%', duration: 1, stagger: 0.08, ease: 'expo.out',
+       scrollTrigger: {trigger: '#team', start: 'top 75%'}}
+    );
+  });
+  
+  document.querySelectorAll('.team-role').forEach(el => {
+    const wordInners = splitTextForReveal(el, 'words');
+    gsap.fromTo(wordInners,
+      {y: '110%'},
+      {y: '0%', duration: 0.9, stagger: 0.05, ease: 'expo.out',
+       scrollTrigger: {trigger: '#team', start: 'top 78%'}}
+    );
+  });
+  
+  // Ask section
+  animateSectionLabel('#ask .section-label');
+  
+  document.querySelectorAll('.ask-title').forEach(el => {
+    const wordInners = splitTextForReveal(el, 'words');
+    gsap.fromTo(wordInners,
+      {y: '110%'},
+      {y: '0%', duration: 1.05, stagger: 0.07, ease: 'expo.out',
+       scrollTrigger: {trigger: '#ask', start: 'top 75%'}}
+    );
+  });
+  
+  document.querySelectorAll('.ask-desc').forEach(el => {
+    const wordInners = splitTextForReveal(el, 'words');
+    gsap.fromTo(wordInners,
+      {y: '110%', opacity: 0.6},
+      {y: '0%', opacity: 1, duration: 0.85, stagger: 0.04, ease: 'expo.out',
+       scrollTrigger: {trigger: '#ask', start: 'top 77%'}}
+    );
+  });
+  
+  // Solution titles and bodies
+  document.querySelectorAll('.sol-title').forEach(el => {
+    const wordInners = splitTextForReveal(el, 'words');
+    gsap.fromTo(wordInners,
+      {y: '110%'},
+      {y: '0%', duration: 0.9, stagger: 0.06, ease: 'expo.out',
+       scrollTrigger: {trigger: el.closest('.sol-feat'), start: 'top 85%'}}
+    );
+  });
+  
+  document.querySelectorAll('.sol-body').forEach(el => {
+    const wordInners = splitTextForReveal(el, 'words');
+    gsap.fromTo(wordInners,
+      {y: '110%', opacity: 0.6},
+      {y: '0%', opacity: 1, duration: 0.8, stagger: 0.04, ease: 'expo.out',
+       scrollTrigger: {trigger: el.closest('.sol-feat'), start: 'top 87%'}}
+    );
+  });
+});
+
+// Problem pin — desktop only
 if(!isMob){
   ScrollTrigger.create({trigger:'#problem-wrapper',start:'top top',end:'bottom bottom',pin:'#problem-pin',pinSpacing:false});
   gsap.timeline({scrollTrigger:{trigger:'#problem-wrapper',start:'top top',end:'bottom bottom',scrub:.8}})
@@ -1163,7 +1405,7 @@ if(!isMob){
     scrollTrigger:{trigger:'#problem-pin',start:'top 80%'}});
 }
 
-// Market horizontal — desktop only; mobile uses native scroll
+// Market horizontal — desktop only
 if(!isMob){
   ScrollTrigger.create({trigger:'#market-wrapper',start:'top top',end:'bottom bottom',pin:'#market-pin',pinSpacing:false});
   const track=document.getElementById('market-track');
@@ -1174,7 +1416,7 @@ if(!isMob){
     onUpdate(s){const i=Math.round(s.progress*3);dots.forEach((d,j)=>d.classList.toggle('active',j===i))}
   }});
 } else {
-  // Mobile: first dot stays active, native horizontal scroll handles rest
+  // Mobile: first dot stays active
   document.querySelector('.m-dot')?.classList.add('active');
 }
 
@@ -1188,7 +1430,7 @@ document.querySelectorAll('.stat-num[data-target]').forEach(el=>{
   }});
 });
 
-// Team rows — on mobile they're already visible via CSS
+// Team rows — on mobile they're already visible
 if(!isMob){
   gsap.to('.t-row',{opacity:1,x:0,duration:.8,stagger:.1,ease:'power3.out',
     scrollTrigger:{trigger:'#team',start:'top 70%'}});
@@ -1199,10 +1441,10 @@ gsap.to('#ask-box',{opacity:1,y:0,duration:1,ease:'expo.out',
   scrollTrigger:{trigger:'#ask',start:'top 75%'}});
 
 
-// ══════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════════════════
 // ENHANCEMENT 1: LENIS SMOOTH SCROLL
-// ══════════════════════════════════════════════════════════════════
-document.head.insertAdjacentHTML('beforeend', '<script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js"><\/script>');
+// ══════════════════════════════════════════════════════════════════════════════════════════
+document.head.insertAdjacentHTML('beforeend', '<script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js"><\\/script>');
 
 let lenis;
 window.addEventListener('DOMContentLoaded', () => {
@@ -1217,9 +1459,9 @@ window.addEventListener('DOMContentLoaded', () => {
   gsap.ticker.lagSmoothing(0);
 });
 
-// ══════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════════════════
 // ENHANCEMENT 2: ENHANCED CUSTOM CURSOR WITH STATES
-// ══════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════════════════
 const cursor = document.getElementById('cursor');
 const cursorRing = document.getElementById('cursor-ring');
 let cursorState = 'default';
@@ -1260,9 +1502,9 @@ arrowElements.forEach(el => {
   el.addEventListener('mouseleave', () => setCursorState('default'));
 });
 
-// ══════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════════════════
 // ENHANCEMENT 3: CANVAS ANIMATED GRADIENT LOGO
-// ══════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════════════════
 function createAnimatedLogo() {
   const navLogo = document.querySelector('.nav-logo');
   if (!navLogo) return;
@@ -1305,9 +1547,9 @@ function createAnimatedLogo() {
 
 window.addEventListener('DOMContentLoaded', createAnimatedLogo);
 
-// ══════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════════════════
 // ENHANCEMENT 4: ENTRY ANIMATIONS (IntersectionObserver)
-// ══════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════════════════
 const observerOptions = {
   threshold: 0.1,
   rootMargin: '0px 0px -100px 0px'
@@ -1328,47 +1570,47 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// ══════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════════════════
 // ENHANCEMENT 5: LIGHTNING TEXT EFFECT
-// ══════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════════════════
 function initLightningEffect() {
   const headline = document.getElementById('sol-headline');
   if (!headline) return;
 
-  // Split text into characters with spans
-  const text = headline.textContent;
-  headline.innerHTML = '';
-  text.split('').forEach(char => {
-    const span = document.createElement('span');
-    span.className = 'char-lightning';
-    span.textContent = char;
-    headline.appendChild(span);
-  });
-
+  // Lightning effect is applied to word-inner spans (after split)
+  // We'll add lightning periodically to random words
   headline.classList.add('lightning-active');
 
   function randomLightning() {
-    const chars = headline.querySelectorAll('.char-lightning');
-    const randomChar = chars[Math.floor(Math.random() * chars.length)];
+    const wordInners = headline.querySelectorAll('.word-inner');
+    if (wordInners.length === 0) return;
+    
+    const randomWord = wordInners[Math.floor(Math.random() * wordInners.length)];
     const duration = (Math.random() * 0.4 + 0.3).toFixed(2);
 
-    randomChar.style.setProperty('--lightning-duration', duration + 's');
-    randomChar.style.animation = 'none';
+    randomWord.style.setProperty('--lightning-duration', duration + 's');
+    randomWord.style.animation = 'none';
     setTimeout(() => {
-      randomChar.style.animation = `lightning-flash ${duration}s ease-out forwards`;
+      randomWord.style.animation = `lightning-flash ${duration}s ease-out forwards`;
     }, 10);
 
     setTimeout(randomLightning, Math.random() * 2500 + 2500);
   }
 
-  randomLightning();
+  // Start after solution is visible
+  ScrollTrigger.create({
+    trigger: '#solution',
+    start: 'top 70%',
+    onEnter: () => randomLightning(),
+    once: true
+  });
 }
 
 window.addEventListener('DOMContentLoaded', initLightningEffect);
 
-// ══════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════════════════
 // ENHANCEMENT 6: SPLASH CURSOR (CLICK PARTICLES)
-// ══════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════════════════
 const isMobileDev = window.innerWidth <= 768;
 if (!isMobileDev) {
   document.addEventListener('click', (e) => {
@@ -1427,9 +1669,9 @@ if (!isMobileDev) {
   }
 }
 
-// ══════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════════════════
 // ENHANCEMENT 7: FLOATING SECTION INDICATOR
-// ══════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════════════════
 if (!isMobileDev) {
   function initSectionIndicator() {
     const sections = [
@@ -1481,9 +1723,9 @@ if (!isMobileDev) {
   window.addEventListener('DOMContentLoaded', initSectionIndicator);
 }
 
-// ══════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════════════════
 // ENHANCEMENT 8: PROGRESS BAR LENIS-BASED
-// ══════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════════════════
 function updateProgressBar() {
   if (lenis) {
     const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
@@ -1494,9 +1736,9 @@ function updateProgressBar() {
 }
 window.addEventListener('DOMContentLoaded', updateProgressBar);
 
-// ══════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════════════════
 // ENHANCEMENT 9: PAGE LOAD SEQUENCE
-// ══════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════════════════
 function createLoadingScreen() {
   const loadingScreen = document.createElement('div');
   loadingScreen.id = 'loading-screen';
@@ -1559,9 +1801,9 @@ function createLoadingScreen() {
 
 window.addEventListener('DOMContentLoaded', createLoadingScreen);
 
-// ══════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════════════════
 // FIX: Lenis scroll to method compatibility
-// ══════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════════════════
 if (!Lenis.prototype.scrollTo) {
   Lenis.prototype.scrollTo = function(target, options = {}) {
     let targetPos = 0;
